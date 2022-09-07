@@ -91,6 +91,8 @@ static __always_inline enum offcpu_type get_syscall_type(int syscall_id) {
         case __NR_sync_file_range :
         case __NR_fsync :
         case __NR_msync :
+	case __NR_open :
+	case __NR_close :
             type = DISK;
             break;
         case __NR_recvfrom :

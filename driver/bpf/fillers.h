@@ -388,13 +388,14 @@ static __always_inline int bpf_epoll_parse_fds(struct filler_data *data)
 		if (j == ret)
 			break;
 
-		u16 flags = epoll_events_to_scap(events[j].events);
+		//u16 flags = epoll_events_to_scap(events[j].events);
 		*(s64 *)&data->buf[off & SCRATCH_SIZE_HALF] = (int)events[j].data;
 		off += sizeof(s64);
 		if (off > SCRATCH_SIZE_HALF)
 			return PPM_FAILURE_BUFFER_FULL;
 
-		*(s16 *)&data->buf[off & SCRATCH_SIZE_HALF] = flags;
+		//*(s16 *)&data->buf[off & SCRATCH_SIZE_HALF] = flags;
+		*(s16 *)&data->buf[off & SCRATCH_SIZE_HALF] = 0;
 		off += sizeof(s16);
 		++fds_count;
 	}

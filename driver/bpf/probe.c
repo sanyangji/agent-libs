@@ -361,7 +361,7 @@ BPF_KPROBE(finish_task_switch)
 static __always_inline int bpf_trace_enqueue(struct sched_process_exit_args *ctx)
 {
 #ifdef BPF_SUPPORTS_RAW_TRACEPOINTS
-	struct task_struct *p = (struct task_struct *) ctx->prev;
+	struct task_struct *p = (struct task_struct *) ctx->p;
 	u32 pid = _READ(p->pid);
 #else
 	u32 pid = ctx->pid;

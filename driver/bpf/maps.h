@@ -212,4 +212,5 @@ struct bpf_map_def __bpf_section("maps") cpu_records = {
         .max_entries = 1000,
 };
 #endif // __KERNEL__
+
 #endif

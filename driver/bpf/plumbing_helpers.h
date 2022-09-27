@@ -717,7 +717,7 @@ static __always_inline bool prepare_filler(void *ctx,
 	unsigned int cpu;
 
 	if (evt_type < PPM_EVENT_MAX && !settings->events_mask[evt_type]) {
-		return;
+		return false;
 	}
 
 	cpu = bpf_get_smp_processor_id();

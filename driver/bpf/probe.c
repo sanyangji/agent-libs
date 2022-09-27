@@ -203,7 +203,7 @@ BPF_PROBE("sched/", sched_switch, sched_switch_args)
 BPF_PROBE("sched/", sched_switch, sched_switch_args)
 {
 	struct sysdig_bpf_settings *settings;
-	enum ppm_event_type evt_type;
+	enum ppm_event_type evt_type = PPME_CPU_ANALYSIS_E;
 
 	settings = get_bpf_settings();
 	if (!settings)
@@ -749,6 +749,8 @@ BPF_PROBE("tcp/", tcp_send_reset, tcp_reset_args){
 	evt_type = PPME_TCP_SEND_RESET_E;
 
 	call_filler(ctx, ctx, evt_type, settings, UF_NEVER_DROP);
+
+	return 0;
 }
 
 BPF_PROBE("tcp/", tcp_receive_reset, tcp_reset_args){
@@ -764,6 +766,7 @@ BPF_PROBE("tcp/", tcp_receive_reset, tcp_reset_args){
 
 	call_filler(ctx, ctx, evt_type, settings, UF_NEVER_DROP);
 
+	return 0;
 }
 #endif
 

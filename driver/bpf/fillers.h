@@ -25,7 +25,7 @@ or GPL2.txt for full copies of the license.
 #include <linux/tty.h>
 #include <linux/audit.h>
 #include <linux/tcp.h>
-
+#include <linux/eventpoll.h>
 
 /*
  * Linux 5.6 kernels no longer include the old 32-bit timeval

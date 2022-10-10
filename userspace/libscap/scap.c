@@ -2199,6 +2199,12 @@ int32_t scap_unset_eventmask(scap_t* handle, uint32_t event_id) {
 #endif
 }
 
+#if defined(HAS_CAPTURE) && !defined(_WIN32) && !defined(CYGWING_AGENT)
+int32_t scap_handle_profile(scap_t* handle, uint32_t map, uint32_t value, uint32_t pid) {
+	return scap_bpf_handle_profile(handle, map, value, pid);
+}
+#endif
+
 uint32_t scap_event_get_dump_flags(scap_t* handle)
 {
 	return handle->m_last_evt_dump_flags;

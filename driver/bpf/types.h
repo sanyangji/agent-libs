@@ -261,9 +261,10 @@ enum sysdig_map_types {
 	SYSDIG_TMP_SCRATCH_MAP = 7,
 	SYSDIG_SETTINGS_MAP = 8,
 	SYSDIG_LOCAL_STATE_MAP = 9,
+	CPU_ANALYSIS_PID_WHITELIST = 10,
+	CPU_ANALYSIS_PID_BLACKLIST = 11,
 #ifndef BPF_SUPPORTS_RAW_TRACEPOINTS
-	SYSDIG_STASH_MAP = 10,
-	SYSDIG_RTT_STATISTICS = 11,
+	SYSDIG_STASH_MAP = 12,
 #endif
 };
 
@@ -284,6 +285,7 @@ struct sysdig_bpf_settings {
 	uint16_t statsd_port;
 	char if_name[16];
 	bool events_mask[PPM_EVENT_MAX];
+	bool profile_whitelist_enabled;
 } __attribute__((packed));
 
 struct tail_context {

@@ -1946,6 +1946,38 @@ void sinsp::unset_eventmask(uint32_t event_id)
 	}
 }
 
+void sinsp::add_camera_monitor_whitelist(uint32_t pid)
+{
+	if (scap_handle_profile(m_h, 0, 1, pid) != SCAP_SUCCESS)
+	{
+		throw sinsp_exception(scap_getlasterr(m_h));
+	}
+}
+
+void sinsp::remove_camera_monitor_whitelist(uint32_t pid)
+{
+	if (scap_handle_profile(m_h, 0, 0, pid) != SCAP_SUCCESS)
+	{
+		throw sinsp_exception(scap_getlasterr(m_h));
+	}
+}
+
+void sinsp::add_camera_monitor_blacklist(uint32_t pid)
+{
+	if (scap_handle_profile(m_h, 1, 1, pid) != SCAP_SUCCESS)
+	{
+		throw sinsp_exception(scap_getlasterr(m_h));
+	}
+}
+
+void sinsp::remove_camera_monitor_blacklist(uint32_t pid)
+{
+	if (scap_handle_profile(m_h, 1, 0, pid) != SCAP_SUCCESS)
+	{
+		throw sinsp_exception(scap_getlasterr(m_h));
+	}
+}
+
 void sinsp::protodecoder_register_reset(sinsp_protodecoder* dec)
 {
 	m_decoders_reset_list.push_back(dec);

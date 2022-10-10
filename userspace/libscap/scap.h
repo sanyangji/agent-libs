@@ -987,6 +987,18 @@ int32_t scap_set_eventmask(scap_t* handle, uint32_t event_id);
 */
 int32_t scap_unset_eventmask(scap_t* handle, uint32_t event_id);
 
+/*!
+  \brief Unset the event into the eventmask so that
+  users can no longer receive the event. It is
+  the opposite of scap_set_eventmask
+
+  \param handle Handle to the capture instance.
+  \param map Type of map, whitelist=0, blacklist=1
+  \note This function can only be called for live captures.
+*/
+#if defined(HAS_CAPTURE) && !defined(_WIN32) && !defined(CYGWING_AGENT)
+int32_t scap_handle_profile(scap_t* handle, uint32_t map, uint32_t value, uint32_t pid);
+#endif
 
 /*!
   \brief Get the root directory of the system. This usually changes

@@ -129,6 +129,31 @@ static int bpf_map_lookup_elem(int fd, const void *key, void *value)
 	return sys_bpf(BPF_MAP_LOOKUP_ELEM, &attr, sizeof(attr));
 }
 
+static int bpf_map_get_next_key(int fd, const void *key, void *next_key)
+{
+	union bpf_attr attr;
+
+	bzero(&attr, sizeof(attr));
+
+	attr.map_fd = fd;
+	attr.key = (unsigned long) key;
+	attr.next_key = (unsigned long) next_key;
+
+	return sys_bpf(BPF_MAP_GET_NEXT_KEY, &attr, sizeof(attr));
+}
+
+static int bpf_map_delete_elem(int fd, const void *key)
+{
+	union bpf_attr attr;
+
+	bzero(&attr, sizeof(attr));
+
+	attr.map_fd = fd;
+	attr.key = (unsigned long) key;
+
+	return sys_bpf(BPF_MAP_DELETE_ELEM, &attr, sizeof(attr));
+}
+
 static int bpf_map_create(enum bpf_map_type map_type,
 			  int key_size, int value_size, int max_entries,
 			  uint32_t map_flags)
@@ -1447,6 +1472,7 @@ static int32_t set_default_settings(scap_t *handle)
 	settings.fullcapture_port_range_end = 0;
 	settings.statsd_port = 8125;
 	memset(settings.if_name, 0, 16);
+	settings.profile_whitelist_enabled = false;
 	int i = 0;
 	for (i = 0; i < PPM_EVENT_MAX; i++) {
 	    settings.events_mask[i] = true;
@@ -1747,5 +1773,82 @@ int32_t scap_bpf_handle_eventmask(scap_t* handle, uint32_t op, uint32_t event_id
 		return SCAP_FAILURE;
 	}
 
+	return SCAP_SUCCESS;
+}
+
+int32_t scap_bpf_handle_profile(scap_t* handle, uint32_t map, uint32_t value, uint32_t pid)
+{
+	struct sysdig_bpf_settings settings;
+	int k = 0;
+
+	if(bpf_map_lookup_elem(handle->m_bpf_map_fds[SYSDIG_SETTINGS_MAP], &k, &settings) != 0)
+	{
+		snprintf(handle->m_lasterr, SCAP_LASTERR_SIZE, "SYSDIG_SETTINGS_MAP bpf_map_lookup_elem < 0");
+		return SCAP_FAILURE;
+	}
+	int neg_one = -1;
+	switch(map)
+	{
+	case 0:
+	{
+		if (value == 0)
+		{
+			int current;
+			if(bpf_map_lookup_elem(handle->m_bpf_map_fds[CPU_ANALYSIS_PID_WHITELIST], &pid, &current) != 0)
+			{
+				break;
+			}
+			if(bpf_map_delete_elem(handle->m_bpf_map_fds[CPU_ANALYSIS_PID_WHITELIST], &pid) != 0)
+			{
+				snprintf(handle->m_lasterr, SCAP_LASTERR_SIZE, "CPU_ANALYSIS_PID_WHITELIST bpf_map_delete_elem < 0");
+				return SCAP_FAILURE;
+			}
+			int next_key;
+			if(bpf_map_get_next_key(handle->m_bpf_map_fds[CPU_ANALYSIS_PID_WHITELIST], &neg_one, &next_key) < 0)
+			{
+				settings.profile_whitelist_enabled = false;
+			}
+		} else if (value == 1)
+		{
+			if(bpf_map_update_elem(handle->m_bpf_map_fds[CPU_ANALYSIS_PID_WHITELIST], &pid, &value, BPF_ANY) != 0)
+			{
+				snprintf(handle->m_lasterr, SCAP_LASTERR_SIZE, "CPU_ANALYSIS_PID_WHITELIST bpf_map_update_elem < 0");
+				return SCAP_FAILURE;
+			}
+			settings.profile_whitelist_enabled = true;
+		}
+		break;
+	}
+	case 1:
+	{
+		if (value == 0)
+		{
+			int current;
+			if(bpf_map_lookup_elem(handle->m_bpf_map_fds[CPU_ANALYSIS_PID_WHITELIST], &pid, &current) != 0)
+			{
+				break;
+			}
+			if(bpf_map_delete_elem(handle->m_bpf_map_fds[CPU_ANALYSIS_PID_BLACKLIST], &pid) != 0)
+			{
+				snprintf(handle->m_lasterr, SCAP_LASTERR_SIZE, "CPU_ANALYSIS_PID_BLACKLIST bpf_map_delete_elem < 0");
+				return SCAP_FAILURE;
+			}
+		} else if (value == 1)
+		{
+			if(bpf_map_update_elem(handle->m_bpf_map_fds[CPU_ANALYSIS_PID_BLACKLIST], &pid, &value, BPF_ANY) != 0)
+			{
+				snprintf(handle->m_lasterr, SCAP_LASTERR_SIZE, "CPU_ANALYSIS_PID_BLACKLIST bpf_map_update_elem < 0");
+				return SCAP_FAILURE;
+			}
+		}
+		break;
+	}
+	}
+
+	if(bpf_map_update_elem(handle->m_bpf_map_fds[SYSDIG_SETTINGS_MAP], &k, &settings, BPF_ANY) != 0)
+	{
+		snprintf(handle->m_lasterr, SCAP_LASTERR_SIZE, "SYSDIG_SETTINGS_MAP bpf_map_update_elem < 0");
+		return SCAP_FAILURE;
+	}
 	return SCAP_SUCCESS;
 }

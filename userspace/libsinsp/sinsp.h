@@ -791,6 +791,41 @@ public:
 	void unset_eventmask(uint32_t event_id);
 
 	/*!
+	  \brief Add a pid to camera monitor whitelist
+	  \param pid add to whitelist
+	  \return SCAP_SUCCESS if the call is successful
+	   On Failure, SCAP_FAILURE is returned and getlasterr() can be used to
+	   obtain the cause of the error.
+	*/
+	void add_camera_monitor_whitelist(uint32_t pid);
+
+	/*!
+	  \brief remove a pid from camera monitor whitelist
+	  \param pid remove from whitelist
+	  \return SCAP_SUCCESS if the call is successful
+	   On Failure, SCAP_FAILURE is returned and getlasterr() can be used to
+	   obtain the cause of the error.
+	*/
+	void remove_camera_monitor_whitelist(uint32_t pid);
+
+	/*!
+	  \brief Add a pid to camera monitor blacklist
+	  \param pid add to blacklist
+	  \return SCAP_SUCCESS if the call is successful
+	   On Failure, SCAP_FAILURE is returned and getlasterr() can be used to
+	   obtain the cause of the error.
+	*/
+	void add_camera_monitor_blacklist(uint32_t pid);
+
+	/*!
+	  \brief remove a pid from camera monitor blacklist
+	  \param pid remove from blacklist
+	  \return SCAP_SUCCESS if the call is successful
+	   On Failure, SCAP_FAILURE is returned and getlasterr() can be used to
+	   obtain the cause of the error.
+	*/
+	void remove_camera_monitor_blacklist(uint32_t pid);
+	/*!
 	  \brief When reading events from a trace file, this function returns the
 	   read progress as a number between 0 and 100.
 	*/

@@ -57,17 +57,15 @@ static __always_inline void clear_map(u32 tid)
 	bpf_map_delete_elem(&type_map, &tid);
 	bpf_map_delete_elem(&on_start_ts, &tid);
 	bpf_map_delete_elem(&off_start_ts, &tid);
-//    bpf_map_delete_elem(&aggregate_time, &tid);
 	bpf_map_delete_elem(&cpu_records, &tid);
 }
 
-static __always_inline bool check_filter(u32 pid)
+static __always_inline bool check_filter(u32 pid, struct sysdig_bpf_settings *settings)
 {
-	return true;
-	bool *flag = bpf_map_lookup_elem(&cpu_analysis_pid_blacklist, &pid);
-	if (flag != 0 && *flag == 1) {
-		return false;
-	}
+	bool *flag;
+
+	if (!settings->profile_whitelist_enabled)
+		return true;
 	flag = bpf_map_lookup_elem(&cpu_analysis_pid_whitelist, &pid);
 	if (flag != 0 && *flag == 1) {
 		return true;
@@ -219,33 +217,6 @@ static __always_inline void record_cputime_and_out(void *ctx, struct sysdig_bpf_
 		infop->end_ts = settings->boot_time + bpf_ktime_get_ns();
 		// cache
 		bpf_map_update_elem(&cpu_records, &tid, infop, BPF_ANY);
-	}
-}
-
-static __always_inline void aggregate(u32 pid, u32 tid, u64 start_time, u64 current_interval, bool is_on)
-{
-	struct time_aggregate_t* p_time = bpf_map_lookup_elem(&aggregate_time, &pid);
-	if (p_time == 0) {
-		struct time_aggregate_t time_aggregate = {};
-		time_aggregate.start_time = start_time;
-		bpf_map_update_elem(&aggregate_time, &pid, &time_aggregate, BPF_ANY);
-		p_time = bpf_map_lookup_elem(&aggregate_time, &pid);
-	}
-	if (p_time != 0) {
-		if (is_on) {
-			p_time->total_times[0] += current_interval;
-		} else {
-			enum offcpu_type *typep, type;
-			typep = bpf_map_lookup_elem(&type_map, &tid);
-			if (typep == 0) {
-				type = OTHER;
-			} else {
-				type = *typep;
-			}
-			p_time->total_times[1] += current_interval;
-			p_time->time_specs[((int)type - 1) & (TYPE_NUM - 1)] += current_interval;
-		}
-		bpf_map_update_elem(&aggregate_time, &pid, p_time, BPF_ANY);
 	}
 }
 #endif

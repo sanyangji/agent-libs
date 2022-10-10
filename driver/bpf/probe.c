@@ -195,7 +195,6 @@ BPF_PROBE("sched/", sched_switch, sched_switch_args)
 #endif
 
 #ifdef CPU_ANALYSIS
-#define FILTER (tid != 0)
 #define MINBLOCK_US 1
 #define MAXBLOCK_US ((1UL << 48) - 1)
 
@@ -221,7 +220,7 @@ BPF_PROBE("sched/", sched_switch, sched_switch_args)
 	u32 tid = _READ(p->pid);
 	u32 pid = _READ(p->tgid);
 	u64 ts, *tsp;
-	if (FILTER) {
+	if (tid != 0 && check_filter(pid, settings)) {
 		if (_READ(p->state) == TASK_RUNNING) {
 			u64 ts = bpf_ktime_get_ns();
 			bpf_map_update_elem(&cpu_runq, &pid, &ts, BPF_ANY);
@@ -239,17 +238,14 @@ BPF_PROBE("sched/", sched_switch, sched_switch_args)
 			u64 delta_us = delta / 1000; // convert to us
 			bpf_map_delete_elem(&on_start_ts, &tid);
 			if ((delta_us >= MINBLOCK_US) && (delta_us <= MAXBLOCK_US)) {
-				if (check_filter(pid)) {
-					record_cputime_and_out(ctx, settings, pid, tid, *on_ts, delta, 1);
-					// aggregate(pid, tid, *on_ts, delta, 1);
-				}
+				record_cputime_and_out(ctx, settings, pid, tid, *on_ts, delta, 1);
 			}
 		}
 	}
 	// get the next thread's start time
 	tid = _READ(n->pid);
 	pid = _READ(n->tgid);
-	if (!(FILTER))
+	if (tid == 0 || !check_filter(pid, settings))
 		return 0;
 
 	// record oncpu start time
@@ -265,17 +261,14 @@ BPF_PROBE("sched/", sched_switch, sched_switch_args)
 		u64 delta = on_ts - off_ts;
 		u64 delta_us = delta / 1000;
 		if ((delta_us >= MINBLOCK_US) && (delta_us <= MAXBLOCK_US)) {
-			if (check_filter(pid)) {
-				u64 *rq_ts = bpf_map_lookup_elem(&cpu_runq, &tid);
-				u64 rq_la = 0;
-				if (rq_ts != 0) {
-					if (on_ts > *rq_ts)
-						rq_la = (on_ts - *rq_ts) / 1000;
-					bpf_map_delete_elem(&cpu_runq, &tid);
-				}
-				record_cputime(ctx, settings, pid, tid, off_ts, rq_la, delta, 0);
-				// aggregate(pid, tid, off_ts, delta, 0);
+			u64 *rq_ts = bpf_map_lookup_elem(&cpu_runq, &tid);
+			u64 rq_la = 0;
+			if (rq_ts != 0) {
+				if (on_ts > *rq_ts)
+					rq_la = (on_ts - *rq_ts) / 1000;
+				bpf_map_delete_elem(&cpu_runq, &tid);
 			}
+			record_cputime(ctx, settings, pid, tid, off_ts, rq_la, delta, 0);
 		}
 	}
 	return 0;
@@ -297,7 +290,7 @@ BPF_KPROBE(finish_task_switch)
 	u32 tid = _READ(p->pid);
 	u32 pid = _READ(p->tgid);
 	u64 ts, *tsp;
-	if (FILTER) {
+	if (tid != 0 && check_filter(pid, settings)) {
 		if (_READ(p->state) == TASK_RUNNING) {
 			u64 ts = bpf_ktime_get_ns();
 			bpf_map_update_elem(&cpu_runq, &pid, &ts, BPF_ANY);
@@ -315,10 +308,7 @@ BPF_KPROBE(finish_task_switch)
 			u64 delta_us = delta / 1000; // convert to us
 			bpf_map_delete_elem(&on_start_ts, &tid);
 			if ((delta_us >= MINBLOCK_US) && (delta_us <= MAXBLOCK_US)) {
-				if (check_filter(pid)) {
-					record_cputime_and_out(ctx, settings, pid, tid, *on_ts, delta, 1);
-					// aggregate(pid, tid, *on_ts, delta, 1);
-				}
+				record_cputime_and_out(ctx, settings, pid, tid, *on_ts, delta, 1);
 			}
 		}
 	}
@@ -327,7 +317,7 @@ BPF_KPROBE(finish_task_switch)
 
 	tid = _READ(n->pid);
 	pid = _READ(n->tgid);
-	if (!(FILTER))
+	if (tid == 0 || !check_filter(pid, settings))
 		return 0;
 
 	// record oncpu start time
@@ -343,17 +333,14 @@ BPF_KPROBE(finish_task_switch)
 		u64 delta = on_ts - off_ts;
 		u64 delta_us = delta / 1000;
 		if ((delta_us >= MINBLOCK_US) && (delta_us <= MAXBLOCK_US)) {
-			if (check_filter(pid)) {
-				u64 *rq_ts = bpf_map_lookup_elem(&cpu_runq, &tid);
-				u64 rq_la = 0;
-				if (rq_ts != 0) {
-					if (on_ts > *rq_ts)
-						rq_la = (on_ts - *rq_ts) / 1000;
-					bpf_map_delete_elem(&cpu_runq, &tid);
-				}
-				record_cputime(ctx, settings, pid, tid, off_ts, rq_la, delta, 0);
-				// aggregate(pid, tid, off_ts, delta, 0);
+			u64 *rq_ts = bpf_map_lookup_elem(&cpu_runq, &tid);
+			u64 rq_la = 0;
+			if (rq_ts != 0) {
+				if (on_ts > *rq_ts)
+					rq_la = (on_ts - *rq_ts) / 1000;
+				bpf_map_delete_elem(&cpu_runq, &tid);
 			}
+			record_cputime(ctx, settings, pid, tid, off_ts, rq_la, delta, 0);
 		}
 	}
 	return 0;
@@ -774,7 +761,7 @@ BPF_PROBE("tcp/", tcp_receive_reset, tcp_reset_args){
 BPF_KPROBE(sock_recvmsg) {
 	u32 tid = bpf_get_current_pid_tgid();
 
-	if (!(FILTER))
+	if (tid == 0)
 		return 0;
 	// update to NET
 	enum offcpu_type type = NET;
@@ -784,7 +771,7 @@ BPF_KPROBE(sock_recvmsg) {
 BPF_KPROBE(sock_sendmsg) {
 	u32 tid = bpf_get_current_pid_tgid();
 
-	if (!(FILTER))
+	if (tid == 0)
 		return 0;
 	// update to NET
 	enum offcpu_type type = NET;

@@ -85,6 +85,10 @@ BPF_PROBE("raw_syscalls/", sys_enter, sys_enter_args)
 		drop_flags = UF_ALWAYS_DROP;
 	}
 
+	if (evt_type < PPM_EVENT_MAX && !settings->events_mask[evt_type]) {
+		return 0;
+	}
+
 #ifdef BPF_SUPPORTS_RAW_TRACEPOINTS
 	call_filler(ctx, ctx, evt_type, settings, drop_flags);
 #else
@@ -135,6 +139,10 @@ BPF_PROBE("raw_syscalls/", sys_exit, sys_exit_args)
 	} else {
 		evt_type = PPME_GENERIC_X;
 		drop_flags = UF_ALWAYS_DROP;
+	}
+
+	if (evt_type < PPM_EVENT_MAX && !settings->events_mask[evt_type]) {
+		return 0;
 	}
 
 	call_filler(ctx, ctx, evt_type, settings, drop_flags);
@@ -293,6 +301,10 @@ BPF_KPROBE(finish_task_switch)
 	if (!settings->capture_enabled)
 		return 0;
 
+	if (evt_type < PPM_EVENT_MAX && !settings->events_mask[evt_type]) {
+		return 0;
+	}
+
 	struct task_struct *p = (struct task_struct *) ctx->si;
 	u32 tid = _READ(p->pid);
 	u32 pid = _READ(p->tgid);
@@ -401,6 +413,10 @@ static __always_inline int bpf_page_fault(struct page_fault_args *ctx)
 
 	evt_type = PPME_PAGE_FAULT_E;
 
+	if (evt_type < PPM_EVENT_MAX && !settings->events_mask[evt_type]) {
+		return 0;
+	}
+
 	call_filler(ctx, ctx, evt_type, settings, UF_ALWAYS_DROP);
 	return 0;
 }
@@ -428,6 +444,10 @@ BPF_PROBE("signal/", signal_deliver, signal_deliver_args)
 		return 0;
 
 	evt_type = PPME_SIGNALDELIVER_E;
+
+	if (evt_type < PPM_EVENT_MAX && !settings->events_mask[evt_type]) {
+		return 0;
+	}
 
 	call_filler(ctx, ctx, evt_type, settings, UF_ALWAYS_DROP);
 	return 0;
@@ -539,6 +559,10 @@ BPF_KPROBE(tcp_drop)
 		return 0;
 
 	evt_type = PPME_TCP_DROP_E;
+	if (evt_type < PPM_EVENT_MAX && !settings->events_mask[evt_type]) {
+		return 0;
+	}
+
 	if(prepare_filler(ctx, ctx, evt_type, settings, UF_NEVER_DROP)) {
 		bpf_tcp_drop_kprobe_e(ctx);
 	}
@@ -554,10 +578,15 @@ BPF_KPROBE(tcp_rcv_established)
 	u32 daddr = 0;
 	u16 family = 0;
 	struct sysdig_bpf_settings *settings;
-	enum ppm_event_type evt_type;
+	enum ppm_event_type evt_type = PPME_TCP_RCV_ESTABLISHED_E;
 	settings = get_bpf_settings();
 	if (!settings)
 		return 0;
+
+	if (evt_type < PPM_EVENT_MAX && !settings->events_mask[evt_type]) {
+		return 0;
+	}
+
 	struct sock *sk = (struct sock *)_READ(ctx->di);
 	struct tcp_sock *ts = tcp_sk(sk);
 	const struct inet_sock *inet = inet_sk(sk);
@@ -587,7 +616,6 @@ BPF_KPROBE(tcp_rcv_established)
 	} else {
 		if (bpf_ktime_get_ns() - st->last_time > 5000000000) {
 			st->last_time = bpf_ktime_get_ns();
-			evt_type = PPME_TCP_RCV_ESTABLISHED_E;
 			if(prepare_filler(ctx, ctx, evt_type, settings, UF_NEVER_DROP)) {
 				bpf_rtt_kprobe_e(ctx);
 			}
@@ -605,10 +633,13 @@ BPF_KPROBE(tcp_close)
 	u32 daddr = 0;
 	u16 family = 0;
 	struct sysdig_bpf_settings *settings;
-	enum ppm_event_type evt_type;
+	enum ppm_event_type evt_type = PPME_TCP_CLOSE_E;
 	settings = get_bpf_settings();
 	if (!settings)
 		return 0;
+	if (evt_type < PPM_EVENT_MAX && !settings->events_mask[evt_type]) {
+		return 0;
+	}
 
 	struct sock *sk = (struct sock *)_READ(ctx->di);
 	struct tcp_sock *ts = tcp_sk(sk);
@@ -633,7 +664,7 @@ BPF_KPROBE(tcp_close)
 	if(ntohs(sport)==22||ntohs(dport)==22||ntohs(sport)==0||ntohs(dport)==0){
 		return 0;
 	}
-	evt_type = PPME_TCP_CLOSE_E;
+
 	if(prepare_filler(ctx, ctx, evt_type, settings, UF_NEVER_DROP)){
 		bpf_rtt_kprobe_e(ctx);
 	}
@@ -645,12 +676,14 @@ BPF_KPROBE(tcp_close)
 BPF_KPROBE(tcp_retransmit_skb)
 {
 	struct sysdig_bpf_settings *settings;
-	enum ppm_event_type evt_type;
+	enum ppm_event_type evt_type = PPME_TCP_RETRANCESMIT_SKB_E;
 	settings = get_bpf_settings();
 	if (!settings)
 		return 0;
+	if (evt_type < PPM_EVENT_MAX && !settings->events_mask[evt_type]) {
+		return 0;
+	}
 
-	evt_type = PPME_TCP_RETRANCESMIT_SKB_E;
 	if(prepare_filler(ctx, ctx, evt_type, settings, UF_NEVER_DROP)){
 		bpf_tcp_retransmit_skb_kprobe_e(ctx);
 	}
@@ -660,10 +693,13 @@ BPF_KPROBE(tcp_retransmit_skb)
 BPF_KPROBE(tcp_connect)
 {
 	struct sysdig_bpf_settings *settings;
-	enum ppm_event_type evt_type;
+	enum ppm_event_type evt_type = PPME_TCP_CONNECT_X;
 	settings = get_bpf_settings();
 	if (!settings)
 		return 0;
+	if (evt_type < PPM_EVENT_MAX && !settings->events_mask[evt_type]) {
+		return 0;
+	}
 
 	struct sock *sk = (struct sock *)_READ(ctx->di);
 	const struct inet_sock *inet = inet_sk(sk);
@@ -697,12 +733,14 @@ BPF_KPROBE(tcp_connect)
 BPF_KRET_PROBE(tcp_connect)
 {
 	struct sysdig_bpf_settings *settings;
-	enum ppm_event_type evt_type;
+	enum ppm_event_type evt_type = PPME_TCP_CONNECT_X;
 	settings = get_bpf_settings();
 	if (!settings)
 		return 0;
+	if (evt_type < PPM_EVENT_MAX && !settings->events_mask[evt_type]) {
+		return 0;
+	}
 
-	evt_type = PPME_TCP_CONNECT_X;
 	if(prepare_filler(ctx, ctx, evt_type, settings, UF_NEVER_DROP)){
 		bpf_tcp_connect_kprobe_x(ctx);
 	}
@@ -713,10 +751,14 @@ BPF_KRET_PROBE(tcp_connect)
 BPF_KPROBE(tcp_set_state)
 {
 	struct sysdig_bpf_settings *settings;
-	enum ppm_event_type evt_type;
+	enum ppm_event_type evt_type = PPME_TCP_SET_STATE_E;
 	settings = get_bpf_settings();
 	if (!settings)
 		return 0;
+	if (evt_type < PPM_EVENT_MAX && !settings->events_mask[evt_type]) {
+		return 0;
+	}
+
 	struct sock *sk = (struct sock *)_READ(ctx->di);
 	u16 family = 0;
 	bpf_probe_read(&family, sizeof(family), (void *)&sk->__sk_common.skc_family);
@@ -728,7 +770,6 @@ BPF_KPROBE(tcp_set_state)
 	bpf_probe_read(&old_state, sizeof(old_state), (void *)&sk->sk_state);
 	int new_state = _READ(ctx->si);
 	if(old_state == 1 || new_state == 1){
-		evt_type = PPME_TCP_SET_STATE_E;
 		if(prepare_filler(ctx, ctx, evt_type, settings, UF_NEVER_DROP)){
 			bpf_tcp_set_state_kprobe_e(ctx);
 		}

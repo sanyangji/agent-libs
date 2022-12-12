@@ -481,6 +481,7 @@ int bpf_sched_process_fork(struct sched_process_fork_args *ctx)
 }
 #endif
 
+#ifdef NET_ENABLE
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
 BPF_PROBE("net/", net_dev_start_xmit, net_dev_start_xmit_args)
 {
@@ -809,6 +810,7 @@ BPF_PROBE("tcp/", tcp_receive_reset, tcp_reset_args){
 
 	return 0;
 }
+#endif
 #endif
 
 #ifdef CPU_ANALYSIS

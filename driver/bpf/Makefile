@@ -21,6 +21,7 @@ FILTERED_KBUILD_CPPFLAGS=$(shell echo " ${KBUILD_CPPFLAGS} " | sed 's/ -fmacro-p
 
 # DEBUG = -DBPF_DEBUG
 CPU = -DCPU_ANALYSIS
+NETDEFINE = -DNET_ENABLE
 all:
 	$(MAKE) -C $(KERNELDIR) M=$$PWD
 
@@ -42,6 +43,7 @@ $(obj)/probe.o: $(src)/probe.c \
 		$(KBUILD_EXTRA_CPPFLAGS) \
 		$(DEBUG) \
 		$(CPU) \
+		$(NETDEFINE) \
 		-D__KERNEL__ \
 		-D__BPF_TRACING__ \
 		-Wno-gnu-variable-sized-type-not-at-end \

@@ -2316,6 +2316,11 @@ int f_sys_sendmsg_x(struct event_filler_arguments *args)
 	return add_sentinel(args);
 }
 
+int f_sys_sendmmsg_x(struct event_filler_arguments *args)
+{
+	return 0;
+}
+
 int f_sys_recvmsg_x(struct event_filler_arguments *args)
 {
 	int res;

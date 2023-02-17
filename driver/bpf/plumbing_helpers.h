@@ -57,7 +57,6 @@ static __always_inline void clear_map(u32 tid)
 	bpf_map_delete_elem(&on_start_ts, &tid);
 	bpf_map_delete_elem(&off_start_ts, &tid);
 	bpf_map_delete_elem(&cpu_focus_threads, &tid);
-//    bpf_map_delete_elem(&aggregate_time, &tid);
 	bpf_map_delete_elem(&cpu_records, &tid);
 }
 
@@ -164,8 +163,6 @@ static __always_inline void record_cpu_offtime(void *ctx, struct sysdig_bpf_sett
 		}
 		// update end_ts
 		infop->end_ts = settings->boot_time + bpf_ktime_get_ns();
-		// cache
-		bpf_map_update_elem(&cpu_records, &tid, infop, BPF_ANY);
 	}
 }
 
@@ -186,23 +183,27 @@ static __always_inline void record_cpu_ontime_and_out(void *ctx, struct sysdig_b
 	}
 
 	if (infop != 0) {
-		enum offcpu_type *typep, type;
-		// get the type of offcpu
-		typep = bpf_map_lookup_elem(&type_map, &tid);
 		if (infop->index < switch_agg_num) {
 			infop->times_specs[infop->index & (NUM - 1)] = delta;
 			infop->index++;
 		}
 		// update end_ts
 		infop->end_ts = settings->boot_time + bpf_ktime_get_ns();
+		int offset_ts = infop->end_ts - infop->start_ts;
+
 		u64 *focus_time = bpf_map_lookup_elem(&cpu_focus_threads, &tid);
 		bool have_focus_events = false;
 		if (focus_time) {
 		 	if (*focus_time > start_ts && *focus_time < start_ts + delta) have_focus_events = true;
 		}
+
+		/* Some situations will trigger perf out:
+		   1. have focused events, e.g. net events
+		   2. the times of task switches reach at a specfic number
+		   3. the time range of task switches (namely offset_ts) exceeds threshold
+		*/
 		if (infop->index > 0 && (have_focus_events
 			|| infop->index == switch_agg_num || infop->index == switch_agg_num - 1 || offset_ts > 2000000000)) {
-			//bpf_printk("start_ts %llu", infop->start_ts);
 			// perf out
 			if (prepare_filler(ctx, ctx, PPME_CPU_ANALYSIS_E, settings, 0)) {
 				bpf_cpu_analysis(ctx, infop->tid);
@@ -214,35 +215,6 @@ static __always_inline void record_cpu_ontime_and_out(void *ctx, struct sysdig_b
 			memset(infop->times_specs, 0, sizeof(infop->times_specs));
 			memset(infop->rq, 0, sizeof(infop->rq));
 		}
-		// cache
-		bpf_map_update_elem(&cpu_records, &tid, infop, BPF_ANY);
-	}
-}
-
-static __always_inline void aggregate(u32 pid, u32 tid, u64 start_time, u64 current_interval, bool is_on)
-{
-	struct time_aggregate_t* p_time = bpf_map_lookup_elem(&aggregate_time, &pid);
-	if (p_time == 0) {
-		struct time_aggregate_t time_aggregate = {};
-		time_aggregate.start_time = start_time;
-		bpf_map_update_elem(&aggregate_time, &pid, &time_aggregate, BPF_ANY);
-		p_time = bpf_map_lookup_elem(&aggregate_time, &pid);
-	}
-	if (p_time != 0) {
-		if (is_on) {
-			p_time->total_times[0] += current_interval;
-		} else {
-			enum offcpu_type *typep, type;
-			typep = bpf_map_lookup_elem(&type_map, &tid);
-			if (typep == 0) {
-				type = OTHER;
-			} else {
-				type = *typep;
-			}
-			p_time->total_times[1] += current_interval;
-			p_time->time_specs[((int)type - 1) & (TYPE_NUM - 1)] += current_interval;
-		}
-		bpf_map_update_elem(&aggregate_time, &pid, p_time, BPF_ANY);
 	}
 }
 #endif

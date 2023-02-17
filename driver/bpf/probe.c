@@ -241,11 +241,10 @@ BPF_PROBE("sched/", sched_switch, sched_switch_args)
 		ts = bpf_ktime_get_ns();
 		bpf_map_update_elem(&off_start_ts, &tid, &ts, BPF_ANY);
 
-		// calculate oncpu time, sleep time - &on_start_ts
-		// p is the focus thread, it switch off
 		u64 *on_ts;
 		on_ts = bpf_map_lookup_elem(&on_start_ts, &tid);
 		if (on_ts != 0) {
+			// calculate previous thread's oncpu delta time
 			u64 delta = ts - *on_ts;
 			u64 delta_us = delta / 1000; // convert to us
 			bpf_map_delete_elem(&on_start_ts, &tid);
@@ -256,22 +255,21 @@ BPF_PROBE("sched/", sched_switch, sched_switch_args)
 			}
 		}
 	}
-	// get the next thread's start time
+
 	tid = _READ(n->pid);
 	pid = _READ(n->tgid);
 	if (!(FILTER))
 		return 0;
 
-	// record oncpu start time
+	// record next thread's oncpu start time
 	u64 on_ts = bpf_ktime_get_ns();
-	// record on start time
 	bpf_map_update_elem(&on_start_ts, &tid, &on_ts, BPF_ANY);
 
 	tsp = bpf_map_lookup_elem(&off_start_ts, &tid);
 	if (tsp != 0) {
 		u64 off_ts = *tsp;
 		bpf_map_delete_elem(&off_start_ts, &tid);
-		// calculate current thread's off delta time
+		// calculate next thread's offcpu delta time
 		u64 delta = on_ts - off_ts;
 		u64 delta_us = delta / 1000;
 		if ((delta_us >= MINBLOCK_US) && (delta_us <= MAXBLOCK_US)) {
@@ -311,15 +309,14 @@ BPF_KPROBE(finish_task_switch)
 			u64 ts = bpf_ktime_get_ns();
 			bpf_map_update_elem(&cpu_runq, &tid, &ts, BPF_ANY);
 		}
-		// record previous thread (current) sleep time
+		// record previous thread's offcpu start time
 		ts = bpf_ktime_get_ns();
 		bpf_map_update_elem(&off_start_ts, &tid, &ts, BPF_ANY);
 
-		// calculate oncpu time, sleep time - &on_start_ts
-		// p is the focus thread, it switch off
 		u64 *on_ts;
 		on_ts = bpf_map_lookup_elem(&on_start_ts, &tid);
 		if (on_ts != 0) {
+			// calculate previous thread's off delta time
 			u64 delta = ts - *on_ts;
 			u64 delta_us = delta / 1000; // convert to us
 			bpf_map_delete_elem(&on_start_ts, &tid);
@@ -330,7 +327,7 @@ BPF_KPROBE(finish_task_switch)
 			}
 		}
 	}
-	// get the next thread's start time
+
 	struct task_struct *n = (struct task_struct *)bpf_get_current_task();
 
 	tid = _READ(n->pid);
@@ -338,16 +335,15 @@ BPF_KPROBE(finish_task_switch)
 	if (!(FILTER))
 		return 0;
 
-	// record oncpu start time
+	// record next thread's oncpu start time
 	u64 on_ts = bpf_ktime_get_ns();
-	// record on start time
 	bpf_map_update_elem(&on_start_ts, &tid, &on_ts, BPF_ANY);
 
 	tsp = bpf_map_lookup_elem(&off_start_ts, &tid);
 	if (tsp != 0) {
 		u64 off_ts = *tsp;
 		bpf_map_delete_elem(&off_start_ts, &tid);
-		// calculate current thread's off delta time
+		// calculate next thread's off delta time
 		u64 delta = on_ts - off_ts;
 		u64 delta_us = delta / 1000;
 		if ((delta_us >= MINBLOCK_US) && (delta_us <= MAXBLOCK_US)) {

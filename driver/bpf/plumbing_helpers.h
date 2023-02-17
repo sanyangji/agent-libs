@@ -29,7 +29,6 @@ or GPL2.txt for full copies of the license.
             bpf_probe_read((void *)dst, size, (char *)ctx + __offset);		\
         } while (0);
 
-//#define BPF_DEBUG
 #ifdef BPF_DEBUG
 #define bpf_printk(fmt, ...)					\
 	do {							\
@@ -197,12 +196,9 @@ static __always_inline void record_cpu_ontime_and_out(void *ctx, struct sysdig_b
 		// update end_ts
 		infop->end_ts = settings->boot_time + bpf_ktime_get_ns();
 		u64 *focus_time = bpf_map_lookup_elem(&cpu_focus_threads, &tid);
-
-		int offset_ts = infop->end_ts - infop->start_ts;
 		bool have_focus_events = false;
-		if(focus_time){
-		 	u64 ftime = settings->boot_time + *focus_time;
-		 	if(ftime > start_ts && ftime < start_ts + delta) have_focus_events = true;
+		if (focus_time) {
+		 	if (*focus_time > start_ts && *focus_time < start_ts + delta) have_focus_events = true;
 		}
 		if (infop->index > 0 && (have_focus_events
 			|| infop->index == switch_agg_num || infop->index == switch_agg_num - 1 || offset_ts > 2000000000)) {

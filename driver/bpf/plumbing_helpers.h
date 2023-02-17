@@ -49,8 +49,8 @@ static __always_inline bool prepare_filler(void *ctx,
 					   enum ppm_event_type evt_type,
 					   struct sysdig_bpf_settings *settings,
 					   enum syscall_flags drop_flags);
-static __always_inline int bpf_cpu_analysis(void *ctx, u32 tid);
 #ifdef CPU_ANALYSIS
+static __always_inline int bpf_cpu_analysis(void *ctx, u32 tid);
 static __always_inline void clear_map(u32 tid)
 {
 	bpf_map_delete_elem(&type_map, &tid);

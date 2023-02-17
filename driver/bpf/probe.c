@@ -252,7 +252,6 @@ BPF_PROBE("sched/", sched_switch, sched_switch_args)
 			if ((delta_us >= MINBLOCK_US) && (delta_us <= MAXBLOCK_US)) {
 				if (check_filter(pid)) {
 					record_cpu_ontime_and_out(ctx, settings, pid, tid, *on_ts, delta);
-					// aggregate(pid, tid, *on_ts, delta, 1);
 				}
 			}
 		}
@@ -285,7 +284,6 @@ BPF_PROBE("sched/", sched_switch, sched_switch_args)
 					bpf_map_delete_elem(&cpu_runq, &tid);
 				}
 				record_cpu_offtime(ctx, settings, pid, tid, off_ts, rq_la, delta);
-				// aggregate(pid, tid, off_ts, delta, 0);
 			}
 		}
 	}
@@ -328,7 +326,6 @@ BPF_KPROBE(finish_task_switch)
 			if ((delta_us >= MINBLOCK_US) && (delta_us <= MAXBLOCK_US)) {
 				if (check_filter(pid)) {
 					record_cpu_ontime_and_out(ctx, settings, pid, tid, *on_ts, delta);
-					// aggregate(pid, tid, *on_ts, delta, 1);
 				}
 			}
 		}
@@ -363,7 +360,6 @@ BPF_KPROBE(finish_task_switch)
 					bpf_map_delete_elem(&cpu_runq, &tid);
 				}
 				record_cpu_offtime(ctx, settings, pid, tid, off_ts, rq_la, delta);
-				// aggregate(pid, tid, off_ts, delta, 0);
 			}
 		}
 	}

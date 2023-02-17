@@ -235,7 +235,7 @@ BPF_PROBE("sched/", sched_switch, sched_switch_args)
 	if (FILTER) {
 		if (_READ(p->state) == TASK_RUNNING) {
 			u64 ts = bpf_ktime_get_ns();
-			bpf_map_update_elem(&cpu_runq, &pid, &ts, BPF_ANY);
+			bpf_map_update_elem(&cpu_runq, &tid, &ts, BPF_ANY);
 		}
 		// record previous thread (current) sleep time
 		ts = bpf_ktime_get_ns();
@@ -311,7 +311,7 @@ BPF_KPROBE(finish_task_switch)
 	if (FILTER) {
 		if (_READ(p->state) == TASK_RUNNING) {
 			u64 ts = bpf_ktime_get_ns();
-			bpf_map_update_elem(&cpu_runq, &pid, &ts, BPF_ANY);
+			bpf_map_update_elem(&cpu_runq, &tid, &ts, BPF_ANY);
 		}
 		// record previous thread (current) sleep time
 		ts = bpf_ktime_get_ns();

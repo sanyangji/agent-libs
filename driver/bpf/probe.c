@@ -238,10 +238,6 @@ BPF_KPROBE(finish_task_switch)
 	u32 pid = _READ(p->tgid);
 	u64 ts, *tsp;
 	if (FILTER) {
-		if (_READ(p->state) == TASK_RUNNING) {
-			u64 ts = bpf_ktime_get_ns();
-			bpf_map_update_elem(&cpu_runq, &tid, &ts, BPF_ANY);
-		}
 		// record previous thread offcpu start time
 		ts = bpf_ktime_get_ns();
 		bpf_map_update_elem(&off_start_ts, &tid, &ts, BPF_ANY);
@@ -258,6 +254,11 @@ BPF_KPROBE(finish_task_switch)
 					record_cpu_ontime_and_out(ctx, settings, pid, tid, *on_ts, delta);
 				}
 			}
+		}
+		// record enqueue time
+		if (_READ(p->state) == TASK_RUNNING) {
+			u64 ts = bpf_ktime_get_ns();
+			bpf_map_update_elem(&cpu_runq, &tid, &ts, BPF_ANY);
 		}
 	}
 

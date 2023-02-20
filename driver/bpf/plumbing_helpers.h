@@ -129,22 +129,28 @@ static __always_inline enum offcpu_type get_syscall_type(int syscall_id) {
 	bpf_map_update_elem(&syscall_map, &syscall_id, &type, BPF_ANY);
 	return type;
 }
-
-static __always_inline void record_cpu_offtime(void *ctx, struct sysdig_bpf_settings *settings, u32 pid, u32 tid, u64 start_ts, u64 latency, u64 delta)
+static __always_inline struct info_t* get_cpu_info(u32 pid, u32 tid, u64 real_start_ts)
 {
-	uint16_t switch_agg_num = settings->switch_agg_num;
 	struct info_t *infop;
 	infop = bpf_map_lookup_elem(&cpu_records, &tid);
-	if (infop == 0) { // try init
+	if (infop == 0) {
 		// init
 		struct info_t info = {0};
 		info.pid = pid;
 		info.tid = tid;
-		info.start_ts = settings->boot_time + start_ts;
+		info.start_ts = real_start_ts;
 		info.index = 0;
 		bpf_map_update_elem(&cpu_records, &tid, &info, BPF_ANY);
 		infop = bpf_map_lookup_elem(&cpu_records, &tid);
 	}
+
+	return infop;
+}
+
+static __always_inline void record_cpu_offtime(void *ctx, struct sysdig_bpf_settings *settings, u32 pid, u32 tid, u64 start_ts, u64 latency, u64 delta)
+{
+	uint16_t switch_agg_num = settings->switch_agg_num;
+	struct info_t *infop = get_cpu_info(pid, tid, settings->boot_time + start_ts);
 
 	if (infop != 0) {
 		if (infop->index < switch_agg_num) {
@@ -169,18 +175,7 @@ static __always_inline void record_cpu_offtime(void *ctx, struct sysdig_bpf_sett
 static __always_inline void record_cpu_ontime_and_out(void *ctx, struct sysdig_bpf_settings *settings, u32 pid, u32 tid, u64 start_ts, u64 delta)
 {
 	uint16_t switch_agg_num = settings->switch_agg_num;
-	struct info_t *infop;
-	infop = bpf_map_lookup_elem(&cpu_records, &tid);
-	if (infop == 0) { // try init
-		// init
-		struct info_t info = {0};
-		info.pid = pid;
-		info.tid = tid;
-		info.start_ts = settings->boot_time + start_ts;
-		info.index = 0;
-		bpf_map_update_elem(&cpu_records, &tid, &info, BPF_ANY);
-		infop = bpf_map_lookup_elem(&cpu_records, &tid);
-	}
+	struct info_t *infop = get_cpu_info(pid, tid, start_ts);
 
 	if (infop != 0) {
 		if (infop->index < switch_agg_num) {

@@ -2376,7 +2376,7 @@ int f_sys_sendmmsg_x(struct event_filler_arguments *args)
 #endif
 			u32 j;
 			uint32_t size = 0;
-			if (unlikely(ppm_copy_from_user(&mmh, (const void __user *)(val + (sizeof(mmh) * hdr_index)), sizeof(mmh)))) {
+			if (unlikely(ppm_copy_from_user(&mmh, (const void __user *)(val + (sizeof(mmh) * i)), sizeof(mmh)))) {
 				return PPM_FAILURE_INVALID_USER_MEMORY;
 			}
 

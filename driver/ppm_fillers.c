@@ -2396,10 +2396,10 @@ int f_sys_sendmmsg_x(struct event_filler_arguments *args)
 				return PPM_FAILURE_INVALID_USER_MEMORY;
 
 			iov = (const struct iovec *)(args->str_storage);
-
-			targetbuf += copylen;
-			targetbuflen -= copylen;
-
+			if (i == 0) {
+				targetbuf += copylen;
+				targetbuflen -= copylen;
+			}
 
 			for (j = 0; j < iovcnt; ++j)
 				size += iov[j].iov_len;

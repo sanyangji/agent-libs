@@ -259,6 +259,8 @@ BPF_KPROBE(finish_task_switch)
 		if (_READ(p->state) == TASK_RUNNING) {
 			u64 ts = bpf_ktime_get_ns();
 			bpf_map_update_elem(&cpu_runq, &tid, &ts, BPF_ANY);
+			enum cpu_type type = INVOLUNTARY;
+			bpf_map_update_elem(&type_map, &tid, &type, BPF_ANY);
 		}
 	}
 

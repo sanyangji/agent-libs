@@ -73,13 +73,13 @@ static __always_inline bool check_filter(u32 pid)
 	}
 	return false;
 }
-static __always_inline enum offcpu_type get_syscall_type(int syscall_id) {
-	enum offcpu_type *typep;
+static __always_inline enum cpu_type get_syscall_type(int syscall_id) {
+	enum cpu_type *typep;
 	typep = bpf_map_lookup_elem(&syscall_map, &syscall_id);
 	if (typep != 0)
 		return *typep;
 
-	enum offcpu_type type;
+	enum cpu_type type;
 	switch(syscall_id) {
 		case __NR_read :
 		case __NR_pread64 :
@@ -95,7 +95,7 @@ static __always_inline enum offcpu_type get_syscall_type(int syscall_id) {
 		case __NR_msync :
 		case __NR_open :
 		case __NR_close :
-			type = DISK;
+			type = FILE;
 			break;
 		case __NR_recvfrom :
 		case __NR_recvmmsg :
@@ -108,7 +108,7 @@ static __always_inline enum offcpu_type get_syscall_type(int syscall_id) {
 			type = NET;
 			break;
 		case __NR_futex :
-			type = LOCK;
+			type = FUTEX;
 			break;
 		case __NR_pselect6 :
 		case __NR_select :
@@ -156,7 +156,7 @@ static __always_inline void record_cpu_offtime(void *ctx, struct sysdig_bpf_sett
 		if (infop->index < switch_agg_num) {
 			infop->times_specs[infop->index & (NUM - 1)] = delta;
 			// get the type of offcpu
-			enum offcpu_type *typep, type;
+			enum cpu_type *typep, type;
 			typep = bpf_map_lookup_elem(&type_map, &tid);
 			if (typep == 0) {
 				type = OTHER;

@@ -69,10 +69,10 @@ BPF_PROBE("raw_syscalls/", sys_enter, sys_enter_args)
 	if (!settings->capture_enabled)
 		return 0;
 #ifdef CPU_ANALYSIS
-	enum offcpu_type type = get_syscall_type((int)id);
+	enum cpu_type type = get_syscall_type((int)id);
 	u32 tid = bpf_get_current_pid_tgid();
 	bpf_map_update_elem(&type_map, &tid, &type, BPF_ANY);
-	if(type == NET || type == DISK) {
+	if(type == NET || type == FILE) {
 		u64 enter_time = bpf_ktime_get_ns();
 		bpf_map_update_elem(&cpu_focus_threads, &tid, &enter_time, BPF_ANY);
 	}
@@ -123,11 +123,11 @@ BPF_PROBE("raw_syscalls/", sys_exit, sys_exit_args)
 	if (!settings)
 		return 0;
 #ifdef CPU_ANALYSIS
-	enum offcpu_type type = get_syscall_type((int)id);
+	enum cpu_type type = get_syscall_type((int)id);
 	u32 tid = bpf_get_current_pid_tgid();
 
 	bpf_map_delete_elem(&type_map, &tid);
-	if(type == NET || type == DISK) {
+	if(type == NET || type == FILE) {
 		u64 exit_time = bpf_ktime_get_ns();
 		bpf_map_update_elem(&cpu_focus_threads, &tid, &exit_time, BPF_ANY);
 	}
@@ -731,7 +731,7 @@ BPF_KPROBE(sock_recvmsg) {
 	if (!(FILTER))
 		return 0;
 	// update to NET
-	enum offcpu_type type = NET;
+	enum cpu_type type = NET;
 	u64 enter_time = bpf_ktime_get_ns();
 	bpf_map_update_elem(&cpu_focus_threads, &tid, &enter_time, BPF_ANY);
 	bpf_map_update_elem(&type_map, &tid, &type, BPF_ANY);
@@ -743,7 +743,7 @@ BPF_KPROBE(sock_sendmsg) {
 	if (!(FILTER))
 		return 0;
 	// update to NET
-	enum offcpu_type type = NET;
+	enum cpu_type type = NET;
 	u64 enter_time = bpf_ktime_get_ns();
 	bpf_map_update_elem(&cpu_focus_threads, &tid, &enter_time, BPF_ANY);
 	bpf_map_update_elem(&type_map, &tid, &type, BPF_ANY);

@@ -6,6 +6,8 @@ This file is dual licensed under either the MIT or GPL 2. See MIT.txt
 or GPL2.txt for full copies of the license.
 
 */
+#pragma once
+
 #ifndef __TYPES_H
 #define __TYPES_H
 
@@ -306,6 +308,33 @@ struct sysdig_bpf_per_cpu_state {
 	bool in_use;
 } __attribute__((packed));
 
+#endif
+
+#ifdef CPU_ANALYSIS
+#define CPU_TYPE_MAX 16
+enum cpu_type {
+    ON = 0,
+    FILE = 1,
+    NET = 2,
+    FUTEX = 3,
+    IDLE = 4,
+    EPOLL = 5,
+    INVOLUNTARY = 6,
+    OTHER = CPU_TYPE_MAX
+};
+
+#define NUM 16
+#define HALF_NUM (NUM >> 1)
+struct info_t {
+    u32 pid;
+    u32 tid;
+    u64 start_ts;
+    u64 end_ts;
+    u32 index;
+    u64 times_specs[NUM];
+    u64 rq[HALF_NUM];
+    u8 time_type[NUM];
+};
 #endif
 
 #ifdef CONFIG_ARM64

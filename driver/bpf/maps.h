@@ -113,29 +113,7 @@ struct bpf_map_def __bpf_section("maps") stash_tuple_map = {
 	.max_entries = 65535,
 };
 
-enum offcpu_type {
-    ON, // 0
-    DISK, // 1
-    NET, // 2
-    LOCK, // 3
-    IDLE, // 4
-    OTHER,
-    EPOLL
-};
-
-#define NUM 16
-#define HALF_NUM (NUM >> 1)
-struct info_t {
-    u32 pid;
-    u32 tid;
-    u64 start_ts;
-    u64 end_ts;
-    u32 index;
-    u64 times_specs[NUM];
-    u64 rq[HALF_NUM];
-    u8 time_type[NUM];
-};
-
+#ifdef CPU_ANALYSIS
 struct bpf_map_def __bpf_section("maps") on_start_ts = {
         .type = BPF_MAP_TYPE_HASH,
         .key_size = sizeof(u32),
@@ -160,14 +138,14 @@ struct bpf_map_def __bpf_section("maps") cpu_runq = {
 struct bpf_map_def __bpf_section("maps") type_map = {
         .type = BPF_MAP_TYPE_HASH,
         .key_size = sizeof(u32),
-        .value_size = sizeof(enum offcpu_type),
+        .value_size = sizeof(enum cpu_type),
         .max_entries = 65535,
 };
 
 struct bpf_map_def __bpf_section("maps") syscall_map = {
         .type = BPF_MAP_TYPE_HASH,
         .key_size = sizeof(u32),
-        .value_size = sizeof(enum offcpu_type),
+        .value_size = sizeof(enum cpu_type),
         .max_entries = 1000,
 };
 
@@ -198,6 +176,8 @@ struct bpf_map_def __bpf_section("maps") cpu_focus_threads = {
         .value_size = sizeof(u64),
         .max_entries = 65535,
 };
+#endif
+
 #endif // __KERNEL__
 
 #endif
